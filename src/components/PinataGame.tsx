@@ -4,11 +4,12 @@ import {
   playBatWhoosh,
   playWhack,
   playCrack,
+  playSweetSpotChime,
   playPinataExplosion,
   playVictory,
 } from '../utils/sound';
 import { fireChocolateConfetti, fireVictoryConfetti } from '../utils/confetti';
-import { Sparkles, Trophy, Award } from 'lucide-react';
+import { Sparkles, Trophy, Award, Target } from 'lucide-react';
 
 interface PinataGameProps {
   initialPlayers: Player[];
@@ -33,24 +34,75 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     });
   });
 
+  // Calculate total initial swings to scale Piñata Max HP so all players get to enjoy their swings
+  const [maxPinataHp] = useState<number>(() => {
+    const totalSwings = initialPlayers.reduce(
+      (acc, p) => acc + Math.max(1, p.berries + (p.arrivedAtCastleOrder === 1 ? 6 : 0)),
+      0
+    );
+    return Math.max(160, totalSwings * 20);
+  });
+
   // First to reach the castle always bats first!
   const [activePlayerIdx, setActivePlayerIdx] = useState<number>(() => {
     const firstArriverIdx = initialPlayers.findIndex((p) => p.arrivedAtCastleOrder === 1);
     return firstArriverIdx !== -1 ? firstArriverIdx : 0;
   });
 
-  const [pinataHp, setPinataHp] = useState<number>(100);
+  const [pinataHp, setPinataHp] = useState<number>(() => {
+    const totalSwings = initialPlayers.reduce(
+      (acc, p) => acc + Math.max(1, p.berries + (p.arrivedAtCastleOrder === 1 ? 6 : 0)),
+      0
+    );
+    return Math.max(160, totalSwings * 20);
+  });
+
   const [isSwinging, setIsSwinging] = useState<boolean>(false);
   const [swingEffect, setSwingEffect] = useState<{
     text: string;
     points: number;
     candies: string[];
     isGolden?: boolean;
+    rating?: 'critical' | 'great' | 'glance';
   } | null>(null);
   const [isBroken, setIsBroken] = useState<boolean>(false);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
+  // Timing Meter States
+  const [sliderPos, setSliderPos] = useState<number>(50);
+  const [frozenSliderPos, setFrozenSliderPos] = useState<number | null>(null);
+  const [lastHitRating, setLastHitRating] = useState<'critical' | 'great' | 'glance' | null>(null);
+  const sliderPosRef = useRef<number>(50);
+
   const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const activePlayer = players[activePlayerIdx];
+  const berryCount = activePlayer?.berries ?? 0;
+  // Base 1100ms cycle duration for 0 berries; each berry adds +220ms (up to 3300ms maximum!)
+  // More berries = significantly slower slider = much easier to hit the Sweet Spot!
+  const cycleDurationMs = Math.min(3300, 1100 + Math.max(0, berryCount) * 220);
+  const slowBonusPercent = Math.min(200, Math.round(((cycleDurationMs - 1100) / 1100) * 100));
+
+  // RequestAnimationFrame oscillator for the timing meter
+  useEffect(() => {
+    if (isSwinging || isGameOver) return;
+
+    let animId: number;
+    const startTime = performance.now();
+
+    const loop = (now: number) => {
+      const elapsed = (now - startTime) % cycleDurationMs;
+      const progress = elapsed / cycleDurationMs;
+      // Linear triangle wave: 0% -> 100% -> 0%
+      const pos = progress < 0.5 ? progress * 200 : (1 - progress) * 200;
+      sliderPosRef.current = pos;
+      setSliderPos(pos);
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isSwinging, isGameOver, cycleDurationMs]);
 
   // Advance turn to the next player who has swings left
   const advanceToNextBatter = useCallback((currentPlayers: Player[], startIdx: number) => {
@@ -84,92 +136,130 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     }, 4500);
   };
 
-  // Execute a swing
-  const handleSwing = useCallback(() => {
-    if (isSwinging || isGameOver) return;
-    const currentActive = players[activePlayerIdx];
-    if (!currentActive || currentActive.pinataSwings <= 0) return;
+  // Execute a timed swing
+  const handleSwing = useCallback(
+    (targetPos?: number) => {
+      if (isSwinging || isGameOver) return;
+      const currentActive = players[activePlayerIdx];
+      if (!currentActive || currentActive.pinataSwings <= 0) return;
 
-    setIsSwinging(true);
-    playBatWhoosh();
+      const hitPos = typeof targetPos === 'number' ? targetPos : sliderPosRef.current;
+      setFrozenSliderPos(hitPos);
+      setIsSwinging(true);
+      playBatWhoosh();
 
-    const isGoldenBat = currentActive.arrivedAtCastleOrder === 1;
+      const isGoldenBat = currentActive.arrivedAtCastleOrder === 1;
 
-    setTimeout(() => {
-      // Hit lands!
-      const isCritical = Math.random() > 0.65;
-      const baseDamage = isCritical ? 28 : Math.floor(Math.random() * 12 + 14);
+      // Distance from center sweet spot (50%)
+      const dist = Math.abs(hitPos - 50);
+      let rating: 'critical' | 'great' | 'glance';
+      let baseDamage: number;
+      let basePoints: number;
+      let ratingLabel: string;
+
+      if (dist <= 8) {
+        // 🎯 CRITICAL SWEET SPOT (42% - 58%)
+        rating = 'critical';
+        ratingLabel = '🎯 CRITICAL SWEET SPOT!';
+        baseDamage = Math.floor(Math.random() * 8 + 32); // 32 - 40
+        basePoints = Math.floor(Math.random() * 80 + 320); // 320 - 400
+      } else if (dist <= 22) {
+        // 💥 GREAT HIT (28% - 72%)
+        rating = 'great';
+        ratingLabel = '💥 GREAT HIT!';
+        baseDamage = Math.floor(Math.random() * 8 + 18); // 18 - 26
+        basePoints = Math.floor(Math.random() * 60 + 170); // 170 - 230
+      } else {
+        // 🏏 GLANCING TAP (outer edges)
+        rating = 'glance';
+        ratingLabel = '🏏 GLANCING TAP!';
+        baseDamage = Math.floor(Math.random() * 6 + 8); // 8 - 14
+        basePoints = Math.floor(Math.random() * 35 + 65); // 65 - 100
+      }
+
+      setLastHitRating(rating);
+
       // Golden Mega Bat deals 2x damage and generates 2x candy points!
       const damage = isGoldenBat ? baseDamage * 2 : baseDamage;
-      const basePoints = isCritical ? 260 : Math.floor(Math.random() * 60 + 70);
       const points = isGoldenBat ? basePoints * 2 : basePoints;
 
-      if (isCritical || isGoldenBat) {
-        playCrack();
-      } else {
-        playWhack();
-      }
-      fireChocolateConfetti();
-      if (isGoldenBat) {
-        fireVictoryConfetti();
-      }
-
-      const newHp = Math.max(0, pinataHp - damage);
-      setPinataHp(newHp);
-
-      const candyIcons = ['🍫', '🍬', '🍭', '🍩', '✨'];
-      const droppedCandies = [
-        candyIcons[Math.floor(Math.random() * candyIcons.length)],
-        candyIcons[Math.floor(Math.random() * candyIcons.length)],
-        ...(isCritical || isGoldenBat ? ['🍫', '🍬', '🌟', '🍫'] : []),
-      ];
-
-      setSwingEffect({
-        text: isGoldenBat
-          ? (isCritical ? `🌟 GOLDEN CRITICAL SMASH! +${points} CANDY! 🌟` : `🌟 GOLDEN MEGA HIT! +${points} CANDY! 🌟`)
-          : (isCritical ? `💥 CRITICAL SWEET CRACK! +${points} 💥` : `WHACK! +${points} CANDY!`),
-        points,
-        candies: droppedCandies,
-        isGolden: isGoldenBat,
-      });
-
-      // Update player state
-      const updatedPlayers = players.map((p, idx) => {
-        if (idx === activePlayerIdx) {
-          return {
-            ...p,
-            pinataSwings: p.pinataSwings - 1,
-            pinataCandy: p.pinataCandy + points,
-          };
+      setTimeout(() => {
+        // Hit lands on the piñata!
+        if (rating === 'critical') {
+          playCrack();
+          playSweetSpotChime();
+          fireVictoryConfetti();
+          fireChocolateConfetti();
+        } else if (rating === 'great') {
+          playWhack();
+          fireChocolateConfetti();
+          if (isGoldenBat) fireVictoryConfetti();
+        } else {
+          playWhack();
         }
-        return p;
-      });
-      setPlayers(updatedPlayers);
 
-      // Check if pinata burst
-      if (newHp === 0 && !isBroken) {
-        setIsBroken(true);
-        playPinataExplosion();
-        fireVictoryConfetti();
+        const newHp = Math.max(0, pinataHp - damage);
+        setPinataHp(newHp);
 
-        // Award giant finish bonus to active batter (500 for Golden Bat, 300 for regular)
-        const burstBonus = isGoldenBat ? 500 : 300;
-        updatedPlayers[activePlayerIdx].pinataCandy += burstBonus;
-        setPlayers([...updatedPlayers]);
+        const candyIcons = ['🍫', '🍬', '🍭', '🍩', '✨'];
+        const droppedCandies = [
+          candyIcons[Math.floor(Math.random() * candyIcons.length)],
+          candyIcons[Math.floor(Math.random() * candyIcons.length)],
+          ...(rating === 'great' ? ['🍫', '🍬', '✨'] : []),
+          ...(rating === 'critical' ? ['🍫', '🍬', '🍭', '🌟', '🍫', '🍩'] : []),
+        ];
 
-        setTimeout(() => {
-          handleFinalCelebration(updatedPlayers);
-        }, 2200);
-      } else {
-        // Reset swing animation and advance batter
-        setTimeout(() => {
-          setIsSwinging(false);
-          setSwingEffect(null);
-          advanceToNextBatter(updatedPlayers, activePlayerIdx);
-        }, 1100);
-      }
-    }, 350);
-  }, [isSwinging, isGameOver, players, activePlayerIdx, pinataHp, isBroken, advanceToNextBatter]);
+        setSwingEffect({
+          text: isGoldenBat
+            ? `🌟 GOLDEN ${ratingLabel.replace('!', '')} +${points} CANDY! 🌟`
+            : `${ratingLabel} +${points} CANDY!`,
+          points,
+          candies: droppedCandies,
+          isGolden: isGoldenBat,
+          rating,
+        });
+
+        // Update player state
+        const updatedPlayers = players.map((p, idx) => {
+          if (idx === activePlayerIdx) {
+            return {
+              ...p,
+              pinataSwings: p.pinataSwings - 1,
+              pinataCandy: p.pinataCandy + points,
+            };
+          }
+          return p;
+        });
+        setPlayers(updatedPlayers);
+
+        // Check if pinata burst
+        if (newHp === 0 && !isBroken) {
+          setIsBroken(true);
+          playPinataExplosion();
+          fireVictoryConfetti();
+
+          // Award giant finish bonus to active batter (500 for Golden Bat, 300 for regular)
+          const burstBonus = isGoldenBat ? 500 : 300;
+          updatedPlayers[activePlayerIdx].pinataCandy += burstBonus;
+          setPlayers([...updatedPlayers]);
+
+          setTimeout(() => {
+            handleFinalCelebration(updatedPlayers);
+          }, 2400);
+        } else {
+          // Reset swing animation and advance batter
+          setTimeout(() => {
+            setIsSwinging(false);
+            setFrozenSliderPos(null);
+            setLastHitRating(null);
+            setSwingEffect(null);
+            advanceToNextBatter(updatedPlayers, activePlayerIdx);
+          }, 1250);
+        }
+      }, 350);
+    },
+    [isSwinging, isGameOver, players, activePlayerIdx, pinataHp, isBroken, advanceToNextBatter]
+  );
 
   // Spacebar keyboard listener to swing
   useEffect(() => {
@@ -186,7 +276,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [players, activePlayerIdx, isSwinging, isGameOver, handleSwing]);
 
-  // AI Bot Swing Loop
+  // AI Bot Swing Loop: Bot timing precision scales with berry count!
   useEffect(() => {
     const active = players[activePlayerIdx];
     if (!active || !active.isBot || isSwinging || isGameOver || active.pinataSwings <= 0) {
@@ -194,15 +284,29 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     }
 
     botTimerRef.current = setTimeout(() => {
-      handleSwing();
-    }, 1300);
+      const berries = active.berries;
+      // 0 berries: 35% sweet spot. 6+ berries: up to 85% sweet spot!
+      const sweetSpotChance = Math.min(0.85, 0.35 + berries * 0.08);
+      const roll = Math.random();
+      let botTargetPos = 50;
+      if (roll < sweetSpotChance) {
+        // Sweet spot (45% - 55%)
+        botTargetPos = 46 + Math.random() * 8;
+      } else if (roll < sweetSpotChance + 0.38) {
+        // Great hit (32% - 41% or 59% - 68%)
+        botTargetPos = Math.random() < 0.5 ? 32 + Math.random() * 9 : 59 + Math.random() * 9;
+      } else {
+        // Glancing tap (12% - 25% or 75% - 88%)
+        botTargetPos = Math.random() < 0.5 ? 12 + Math.random() * 13 : 75 + Math.random() * 13;
+      }
+
+      handleSwing(botTargetPos);
+    }, 1400);
 
     return () => {
       if (botTimerRef.current) clearTimeout(botTimerRef.current);
     };
   }, [players, activePlayerIdx, isSwinging, isGameOver, handleSwing]);
-
-  const activePlayer = players[activePlayerIdx];
 
   return (
     <div className="relative z-10 w-full max-w-4xl mx-auto px-2 sm:px-4 py-3 sm:py-6 flex flex-col items-center">
@@ -228,7 +332,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
           {/* Swinging Piñata Body - Tappable on iPad! */}
           <div
-            onClick={!isSwinging && !isGameOver && activePlayer && !activePlayer.isBot ? handleSwing : undefined}
+            onClick={!isSwinging && !isGameOver && activePlayer && !activePlayer.isBot ? () => handleSwing() : undefined}
             className={`relative transition-transform duration-300 select-none cursor-pointer active:scale-95 ${
               isSwinging ? 'scale-110 rotate-12' : 'animate-float'
             }`}
@@ -249,11 +353,11 @@ export const PinataGame: React.FC<PinataGameProps> = ({
               </div>
             </div>
 
-            {/* Crack Overlays */}
-            {pinataHp <= 70 && !isBroken && (
+            {/* Crack Overlays based on Durability Percentage */}
+            {(pinataHp / maxPinataHp) * 100 <= 70 && !isBroken && (
               <span className="absolute top-2 left-2 text-xl sm:text-2xl animate-pulse">⚡</span>
             )}
-            {pinataHp <= 35 && !isBroken && (
+            {(pinataHp / maxPinataHp) * 100 <= 35 && !isBroken && (
               <span className="absolute bottom-4 right-2 text-2xl sm:text-3xl animate-pulse">⚡</span>
             )}
           </div>
@@ -287,15 +391,15 @@ export const PinataGame: React.FC<PinataGameProps> = ({
         </div>
 
         {/* Piñata Health Bar */}
-        <div className="w-full max-w-md mb-6">
+        <div className="w-full max-w-md mb-4">
           <div className="flex justify-between text-xs font-black uppercase text-gray-600 mb-1.5">
             <span>Piñata Durability</span>
-            <span className="text-pink-600 font-extrabold">{pinataHp}%</span>
+            <span className="text-pink-600 font-extrabold">{Math.round((pinataHp / maxPinataHp) * 100)}%</span>
           </div>
           <div className="w-full h-4 bg-pink-100 rounded-full overflow-hidden border-2 border-pink-300 p-0.5">
             <div
               className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-amber-400 rounded-full transition-all duration-300 shadow-sm"
-              style={{ width: `${pinataHp}%` }}
+              style={{ width: `${Math.round((pinataHp / maxPinataHp) * 100)}%` }}
             />
           </div>
         </div>
@@ -303,7 +407,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
         {/* Active Batter Spotlight */}
         {activePlayer && (
           <div
-            className={`flex flex-col items-center p-4 rounded-2xl border-2 shadow-sm w-full max-w-md mb-6 transition-all ${
+            className={`flex flex-col items-center p-3.5 sm:p-4 rounded-2xl border-2 shadow-sm w-full max-w-md mb-4 transition-all ${
               activePlayer.arrivedAtCastleOrder === 1
                 ? 'bg-gradient-to-b from-amber-50/95 via-yellow-50/95 to-white/95 border-amber-300 ring-2 ring-amber-300/60 shadow-amber-200/50'
                 : 'bg-white/90 border-purple-200'
@@ -311,19 +415,19 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-inner"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-inner flex-shrink-0"
                 style={{ backgroundColor: activePlayer.avatarColor + '33' }}
               >
                 {activePlayer.avatar}
               </div>
-              <div>
-                <span className="text-xs font-bold text-gray-500 block uppercase">
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-xs font-bold text-gray-500 block uppercase">
                   Up To Bat:
                 </span>
-                <h3 className="text-lg font-black text-gray-900 flex items-center gap-1.5">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-1.5 truncate">
                   {activePlayer.name} {activePlayer.isBot ? '(AI Bot)' : ''}
                   {activePlayer.arrivedAtCastleOrder === 1 && (
-                    <span className="text-xs bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm">
+                    <span className="text-[10px] sm:text-xs bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm whitespace-nowrap">
                       1st to Castle! 👑
                     </span>
                   )}
@@ -333,14 +437,14 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
             {/* Golden Mega Bat Active Banner */}
             {activePlayer.arrivedAtCastleOrder === 1 && (
-              <div className="mt-2.5 w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 px-3 py-1 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm animate-pulse border border-yellow-500">
+              <div className="mt-2 w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-black flex items-center justify-center gap-1.5 shadow-sm animate-pulse border border-yellow-500 text-center">
                 <span>🌟</span> WIELDING THE GOLDEN MEGA BAT! 2X POWER & CANDY! <span>🌟</span>
               </div>
             )}
 
-            <div className="mt-3 flex items-center justify-between w-full text-xs font-bold bg-pink-50 px-3 py-1.5 rounded-xl border border-pink-200">
+            <div className="mt-2.5 flex items-center justify-between w-full text-xs font-bold bg-pink-50 px-3 py-1.5 rounded-xl border border-pink-200">
               <span className="text-pink-700">
-                Swings Remaining: <strong>{activePlayer.pinataSwings}</strong>
+                Swings Left: <strong>{activePlayer.pinataSwings}</strong>
               </span>
               <span className="text-amber-700">
                 Candy Points: <strong>{activePlayer.pinataCandy}</strong> 🍬
@@ -349,13 +453,150 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           </div>
         )}
 
+        {/* 🎯 TIMING HIT METER - Precision slider scaled by Berry Count */}
+        <div className="w-full max-w-md mb-4 bg-white/95 backdrop-blur-md rounded-2xl p-3 sm:p-4 border-2 border-pink-300 shadow-md">
+          {/* Header & Berry Speed Callout */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-pink-600 animate-pulse" />
+              <span className="text-xs sm:text-sm font-black text-gray-800 tracking-wide uppercase">
+                Hit Timing Meter
+              </span>
+            </div>
+
+            {/* Berry Precision Advantage Badge */}
+            <div
+              className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm ${
+                berryCount > 0
+                  ? 'bg-gradient-to-r from-pink-100 to-purple-100 text-pink-900 border-pink-300'
+                  : 'bg-gray-100 text-gray-600 border-gray-200'
+              }`}
+              title={
+                berryCount > 0
+                  ? `Your ${berryCount} Sparkle Berries slow down this slider by ${slowBonusPercent}% for easier Sweet Spot hits!`
+                  : 'Collect Sparkle Berries to slow down this slider!'
+              }
+            >
+              <span>🍓</span>
+              <span>{berryCount} Berries</span>
+              <span>•</span>
+              <span className={berryCount > 0 ? 'text-purple-700 font-extrabold' : 'text-gray-500'}>
+                {berryCount > 0 ? `${slowBonusPercent}% Slower Slider!` : 'Normal Speed'}
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Timing Track */}
+          <div
+            onClick={!isSwinging && !isGameOver && activePlayer && !activePlayer.isBot ? () => handleSwing() : undefined}
+            className="relative w-full h-10 sm:h-11 rounded-2xl overflow-hidden border-3 border-purple-400 shadow-inner bg-slate-900 cursor-pointer select-none group"
+            title="Time your click when the cursor reaches the center 🎯 Sweet Spot!"
+          >
+            {/* Background Zone Demarcations */}
+            <div className="absolute inset-0 flex h-full w-full pointer-events-none">
+              {/* Glancing Left (0% - 28%) */}
+              <div className="w-[28%] h-full bg-gradient-to-r from-slate-800 via-indigo-900 to-blue-800 flex items-center justify-start pl-2">
+                <span className="text-[9px] sm:text-[10px] font-black text-blue-200/70 tracking-wider">TAP</span>
+              </div>
+
+              {/* Great Hit Left (28% - 42%) */}
+              <div className="w-[14%] h-full bg-gradient-to-r from-amber-500/80 to-amber-400/90 border-x border-amber-300/40 flex items-center justify-center">
+                <span className="text-[9px] sm:text-[10px] font-black text-amber-950/80">GREAT</span>
+              </div>
+
+              {/* 🎯 CRITICAL SWEET SPOT (42% - 58%) */}
+              <div className="w-[16%] h-full bg-gradient-to-r from-pink-500 via-yellow-300 to-pink-500 flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                <span className="relative z-10 text-[9px] sm:text-[10px] font-black text-pink-950 tracking-tighter drop-shadow-sm flex items-center gap-0.5 whitespace-nowrap">
+                  🎯 SWEET SPOT
+                </span>
+              </div>
+
+              {/* Great Hit Right (58% - 72%) */}
+              <div className="w-[14%] h-full bg-gradient-to-r from-amber-400/90 to-amber-500/80 border-x border-amber-300/40 flex items-center justify-center">
+                <span className="text-[9px] sm:text-[10px] font-black text-amber-950/80">GREAT</span>
+              </div>
+
+              {/* Glancing Right (72% - 100%) */}
+              <div className="w-[28%] h-full bg-gradient-to-r from-blue-800 via-indigo-900 to-slate-800 flex items-center justify-end pr-2">
+                <span className="text-[9px] sm:text-[10px] font-black text-blue-200/70 tracking-wider">TAP</span>
+              </div>
+            </div>
+
+            {/* Center Bullseye Tick Line */}
+            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 -translate-x-1/2 bg-white/90 z-10 shadow-sm pointer-events-none" />
+
+            {/* Moving / Frozen Slider Cursor */}
+            <div
+              className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center justify-center z-20 transition-all pointer-events-none"
+              style={{
+                left: `${frozenSliderPos !== null ? frozenSliderPos : sliderPos}%`,
+                transition: frozenSliderPos !== null ? 'none' : 'left 0.016s linear',
+              }}
+            >
+              {/* Glow Cursor */}
+              <div
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-base sm:text-lg shadow-2xl border-2 border-white transform transition-transform ${
+                  frozenSliderPos !== null
+                    ? lastHitRating === 'critical'
+                      ? 'bg-yellow-400 scale-125 ring-4 ring-yellow-300/80 animate-bounce'
+                      : lastHitRating === 'great'
+                      ? 'bg-amber-400 scale-115 ring-2 ring-amber-300'
+                      : 'bg-blue-400 scale-100 ring-1 ring-blue-300'
+                    : 'bg-white/95 scale-105 shadow-yellow-300/50'
+                }`}
+              >
+                {frozenSliderPos !== null ? (
+                  lastHitRating === 'critical' ? '🎯' : lastHitRating === 'great' ? '💥' : '🏏'
+                ) : (
+                  '🏏'
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Zone Legend & Candy Value Callouts */}
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-gray-500">
+            <div className="flex items-center gap-1 text-slate-600">
+              <span>Glancing (60-100🍬)</span>
+            </div>
+            <div className="flex items-center gap-1 text-amber-700 font-extrabold">
+              <span>Great (160-240🍬)</span>
+            </div>
+            <div className="flex items-center gap-1 text-pink-700 font-black">
+              <span>🎯 Sweet Spot (300-400🍬)</span>
+            </div>
+          </div>
+
+          {/* Active Hit Rating Feedback Banner on Impact */}
+          {frozenSliderPos !== null && lastHitRating && (
+            <div
+              className={`mt-2 py-1 px-3 rounded-xl text-center text-xs font-black shadow-sm flex items-center justify-center gap-2 animate-scale-up ${
+                lastHitRating === 'critical'
+                  ? 'bg-gradient-to-r from-yellow-300 via-amber-300 to-yellow-300 text-yellow-950 border-2 border-yellow-500 ring-2 ring-yellow-400/50'
+                  : lastHitRating === 'great'
+                  ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                  : 'bg-blue-50 text-blue-900 border border-blue-200'
+              }`}
+            >
+              <span>
+                {lastHitRating === 'critical'
+                  ? '⭐⭐⭐ PERFECT TIMING! CRITICAL SWEET SPOT HIT! 🎯'
+                  : lastHitRating === 'great'
+                  ? '⭐⭐ GREAT TIMING! SOLID IMPACT! 💥'
+                  : '⭐ GLANCING TAP! 🏏'}
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* Swing Action Button */}
         {activePlayer && !activePlayer.isBot ? (
           <button
             type="button"
-            onClick={handleSwing}
+            onClick={() => handleSwing()}
             disabled={isSwinging || activePlayer.pinataSwings <= 0 || isGameOver}
-            className={`w-full max-w-md py-4 rounded-2xl font-black text-xl shadow-xl transition transform border-2 border-white/60 flex items-center justify-center gap-3 cursor-pointer ${
+            className={`w-full max-w-md py-3.5 sm:py-4 rounded-2xl font-black text-lg sm:text-xl shadow-xl transition transform border-2 border-white/60 flex items-center justify-center gap-3 cursor-pointer ${
               isSwinging || activePlayer.pinataSwings <= 0
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : activePlayer.arrivedAtCastleOrder === 1
@@ -363,13 +604,13 @@ export const PinataGame: React.FC<PinataGameProps> = ({
                 : 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 hover:from-yellow-500 hover:via-pink-600 hover:to-purple-700 text-white hover:scale-105 active:scale-95 shadow-pink-500/30'
             }`}
           >
-            <Sparkles className="w-6 h-6 fill-current" />
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
             <span>
               {isSwinging
                 ? 'SWINGING...'
                 : activePlayer.arrivedAtCastleOrder === 1
-                ? 'SWING GOLDEN MEGA BAT! 🌟🏏'
-                : 'SWING THE BAT! 🏏'}
+                ? 'TIMED SWING (GOLDEN BAT 🌟🏏)'
+                : 'TIMED SWING (HIT 🎯)'}
             </span>
             {!isSwinging && (
               <kbd className="hidden sm:inline-block ml-1 px-2 py-0.5 text-xs font-black bg-white/30 rounded-lg border border-white/40 shadow-inner">
@@ -379,7 +620,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           </button>
         ) : activePlayer && activePlayer.isBot ? (
           <div className="w-full max-w-md py-3.5 bg-purple-100 border-2 border-purple-300 rounded-2xl text-purple-800 font-bold text-center text-base animate-pulse flex items-center justify-center gap-2">
-            <span>🤖</span> {activePlayer.name} is taking a swing...
+            <span>🤖</span> {activePlayer.name} is lining up a timed swing...
           </div>
         ) : null}
       </div>

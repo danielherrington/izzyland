@@ -265,6 +265,31 @@ export function playCrack(): void {
   osc.stop(now + 0.13);
 }
 
+export function playSweetSpotChime(): void {
+  if (!soundEnabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const notes = [587.33, 880, 1174.66, 1760]; // D5, A5, D6, A6 sparkle
+  notes.forEach((freq, idx) => {
+    const now = ctx.currentTime + idx * 0.05;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.36);
+  });
+}
+
 export function playPinataExplosion(): void {
   if (!soundEnabled) return;
   const ctx = getAudioContext();

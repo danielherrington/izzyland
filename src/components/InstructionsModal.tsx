@@ -145,17 +145,23 @@ export const InstructionsModal: React.FC<InstructionsModalProps> = ({ isOpen, on
           {/* Section 5: The Grand Piñata Finale */}
           <div className="bg-gradient-to-r from-yellow-50 to-pink-50 rounded-2xl p-4 border-2 border-yellow-400 shadow-sm">
             <h3 className="text-sm sm:text-base font-black text-yellow-950 flex items-center gap-2 mb-2">
-              <Crown className="w-5 h-5 text-amber-600" /> 4. The Grand Piñata Finale
+              <Crown className="w-5 h-5 text-amber-600" /> 5. The Grand Piñata Finale
             </h3>
             <p className="font-medium text-gray-800 leading-relaxed mb-2">
               Once the Castle Gate is unlocked, all players enter the Grand Piñata showdown!
             </p>
             <ul className="space-y-1.5 text-xs font-semibold list-disc list-inside text-gray-800">
               <li>
+                <strong>🎯 Hit Timing Precision:</strong> Time your tap as the moving cursor enters the center <strong>🎯 Sweet Spot</strong> for massive critical candy (300–400 🍬) and heavy damage!
+              </li>
+              <li>
+                <strong>🍓 Sparkle Berry Advantage:</strong> Every berry you collect in the race slows down the timing slider, making it super easy to hit the Sweet Spot!
+              </li>
+              <li>
                 <strong>1st to Castle Advantage:</strong> Swings first, receives <strong>+6 Bonus Swings</strong>, and wields the <strong>🌟 Golden Mega Bat 🌟</strong> (2x damage and 2x candy points)!
               </li>
               <li>
-                <strong>Whack to Win:</strong> Every swing sprays delicious candy points. Whoever collects the most candy wins the championship!
+                <strong>Whack to Win:</strong> Whoever collects the most candy from the Piñata wins the championship!
               </li>
             </ul>
           </div>
