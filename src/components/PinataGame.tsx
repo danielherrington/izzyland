@@ -20,12 +20,12 @@ export const PinataGame: React.FC<PinataGameProps> = ({
   initialPlayers,
   onFinishPinata,
 }) => {
-  // Initialize players with swings based on berries + arrival order bonus (+6 swings for 1st arrival!)
+  // Initialize players with swings: each player gets around 3 swings (3 base, +1 bonus for 1st to castle)
   const [players, setPlayers] = useState<Player[]>(() => {
     return initialPlayers.map((p) => {
-      // 1 berry = 1 swing, +6 bonus if arrived 1st at the castle, minimum 1 swing
-      const arrivalBonus = p.arrivedAtCastleOrder === 1 ? 6 : 0;
-      const totalSwings = Math.max(1, p.berries + arrivalBonus);
+      // 3 swings base for every player, +1 bonus swing for 1st to castle (total 4)
+      const arrivalBonus = p.arrivedAtCastleOrder === 1 ? 1 : 0;
+      const totalSwings = 3 + arrivalBonus;
       return {
         ...p,
         pinataSwings: totalSwings,
@@ -34,13 +34,14 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     });
   });
 
-  // Calculate total initial swings to scale Piñata Max HP so all players get to enjoy their swings
+  // Calculate total initial swings to scale Piñata Max HP so all players get to enjoy their ~3 swings
   const [maxPinataHp] = useState<number>(() => {
     const totalSwings = initialPlayers.reduce(
-      (acc, p) => acc + Math.max(1, p.berries + (p.arrivedAtCastleOrder === 1 ? 6 : 0)),
+      (acc, p) => acc + (3 + (p.arrivedAtCastleOrder === 1 ? 1 : 0)),
       0
     );
-    return Math.max(160, totalSwings * 20);
+    // Tuned so that the piñata absorbs hits throughout all rounds
+    return Math.max(180, totalSwings * 24);
   });
 
   // First to reach the castle always bats first!
@@ -51,10 +52,10 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
   const [pinataHp, setPinataHp] = useState<number>(() => {
     const totalSwings = initialPlayers.reduce(
-      (acc, p) => acc + Math.max(1, p.berries + (p.arrivedAtCastleOrder === 1 ? 6 : 0)),
+      (acc, p) => acc + (3 + (p.arrivedAtCastleOrder === 1 ? 1 : 0)),
       0
     );
-    return Math.max(160, totalSwings * 20);
+    return Math.max(180, totalSwings * 24);
   });
 
   const [isSwinging, setIsSwinging] = useState<boolean>(false);
@@ -198,7 +199,27 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           playWhack();
         }
 
-        const newHp = Math.max(0, pinataHp - damage);
+        // Update player state first
+        const updatedPlayers = players.map((p, idx) => {
+          if (idx === activePlayerIdx) {
+            return {
+              ...p,
+              pinataSwings: p.pinataSwings - 1,
+              pinataCandy: p.pinataCandy + points,
+            };
+          }
+          return p;
+        });
+        setPlayers(updatedPlayers);
+
+        // Count total remaining swings across all players:
+        const totalRemainingSwings = updatedPlayers.reduce((acc, p) => acc + p.pinataSwings, 0);
+
+        // PACING PROTECTION:
+        // Ensure the Piñata doesn't break early so each player gets around 3 swings!
+        // If there are more than 2 swings left across all players, keep durability clamped at min 8% (heavy cracks & sparks, but won't burst early).
+        const minAllowedHp = totalRemainingSwings > 2 ? Math.max(12, Math.round(maxPinataHp * 0.08)) : 0;
+        const newHp = Math.max(minAllowedHp, pinataHp - damage);
         setPinataHp(newHp);
 
         const candyIcons = ['🍫', '🍬', '🍭', '🍩', '✨'];
@@ -219,22 +240,11 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           rating,
         });
 
-        // Update player state
-        const updatedPlayers = players.map((p, idx) => {
-          if (idx === activePlayerIdx) {
-            return {
-              ...p,
-              pinataSwings: p.pinataSwings - 1,
-              pinataCandy: p.pinataCandy + points,
-            };
-          }
-          return p;
-        });
-        setPlayers(updatedPlayers);
-
-        // Check if pinata burst
-        if (newHp === 0 && !isBroken) {
+        // Check if pinata burst (either HP dropped to 0 in final round, or final swing across all players)
+        const shouldBurst = (newHp === 0 || totalRemainingSwings === 0) && !isBroken;
+        if (shouldBurst) {
           setIsBroken(true);
+          setPinataHp(0);
           playPinataExplosion();
           fireVictoryConfetti();
 
@@ -319,7 +329,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           🪅 THE GRAND CANDY PIÑATA! 🪅
         </h1>
         <p className="text-gray-600 font-bold text-xs sm:text-sm md:text-base max-w-md mx-auto mt-0.5">
-          Take swings using your collected <strong>Sparkle Berries 🍓</strong>! Crack open the piñata to win the candy championship!
+          Each player gets 3 timed swings! Use your <strong>Sparkle Berries 🍓</strong> for slow-mo precision to crack open the piñata and claim the candy championship!
         </p>
       </div>
 
