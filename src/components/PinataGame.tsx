@@ -10,15 +10,18 @@ import {
 } from '../utils/sound';
 import { fireChocolateConfetti, fireVictoryConfetti } from '../utils/confetti';
 import { Sparkles, Trophy, Award, Target } from 'lucide-react';
+import { PinataVideoModal } from './PinataVideoModal';
 
 interface PinataGameProps {
   initialPlayers: Player[];
   onFinishPinata: (rankedPlayers: Player[]) => void;
+  onVideoPlayingChange?: (isPlaying: boolean) => void;
 }
 
 export const PinataGame: React.FC<PinataGameProps> = ({
   initialPlayers,
   onFinishPinata,
+  onVideoPlayingChange,
 }) => {
   // Initialize players
   const [players, setPlayers] = useState<Player[]>(() => {
@@ -69,7 +72,52 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
   const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Video State for Piñata Animations
+  interface ActivePinataVideo {
+    src: string;
+    badge: string;
+    badgeBg?: string;
+    title: string;
+    subtitle: string;
+    onComplete?: () => void;
+  }
+
+  const [activeVideo, setActiveVideo] = useState<ActivePinataVideo | null>(null);
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(false);
+
+  useEffect(() => {
+    onVideoPlayingChange?.(!!activeVideo);
+  }, [activeVideo, onVideoPlayingChange]);
+
   const activePlayer = players[activePlayerIdx];
+
+  // Play starter video when minigame begins
+  useEffect(() => {
+    if (!hasSeenIntro) {
+      const firstPlayer = players[activePlayerIdx];
+      setActiveVideo({
+        src: '/videos/pinata/starter.mp4',
+        badge: '🪅 THE GRAND PIÑATA FINALE! 🪅',
+        badgeBg: 'from-amber-400 via-pink-500 to-purple-600',
+        title: 'Time to Crack the Piñata!',
+        subtitle: `${firstPlayer?.name || 'Player'} steps up to bat first! Time your swings for candy! 🏏🍬`,
+        onComplete: () => {
+          setHasSeenIntro(true);
+        },
+      });
+    }
+  }, []);
+
+  const handleCloseVideo = useCallback(() => {
+    if (activeVideo) {
+      const callback = activeVideo.onComplete;
+      setActiveVideo(null);
+      if (callback) {
+        callback();
+      }
+    }
+  }, [activeVideo]);
+
   const berryCount = activePlayer?.berries ?? 0;
   // Base 1100ms cycle duration for 0 berries; each berry adds +220ms (up to 3300ms maximum!)
   // More berries = significantly slower slider = much easier to hit the Sweet Spot!
@@ -78,7 +126,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
   // RequestAnimationFrame oscillator for the timing meter
   useEffect(() => {
-    if (isSwinging || isGameOver || isBroken) return;
+    if (isSwinging || isGameOver || isBroken || !!activeVideo) return;
 
     let animId: number;
     const startTime = performance.now();
@@ -95,7 +143,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isSwinging, isGameOver, isBroken, cycleDurationMs]);
+  }, [isSwinging, isGameOver, isBroken, activeVideo, cycleDurationMs]);
 
   // Advance turn round-robin to the next player
   const advanceToNextBatter = useCallback((currentPlayers: Player[], startIdx: number) => {
@@ -228,21 +276,60 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           setPlayers([...updatedPlayers]);
 
           setTimeout(() => {
-            handleFinalCelebration(updatedPlayers);
-          }, 2400);
+            setActiveVideo({
+              src: '/videos/pinata/burst.mp4',
+              badge: '💥 PIÑATA BURST! FINALE! 💥',
+              badgeBg: 'from-yellow-400 via-orange-500 to-red-600',
+              title: `${currentActive.name} Cracked It Open!`,
+              subtitle: `The Piñata exploded in a shower of ${burstBonus} bonus candy! 🎉🍬`,
+              onComplete: () => {
+                handleFinalCelebration(updatedPlayers);
+              },
+            });
+          }, 450);
         } else {
-          // Reset swing animation and advance to next batter in round-robin order
+          // Play reaction video based on hit rating
+          const hitVideoConfig =
+            rating === 'critical'
+              ? {
+                  src: '/videos/pinata/sweetspot.mp4',
+                  badge: '🎯 CRITICAL SWEET SPOT! 🌟',
+                  badgeBg: 'from-amber-400 via-yellow-300 to-amber-500 text-stone-950',
+                  title: isGoldenBat ? '🌟 GOLDEN MEGA SWEET SPOT! 🌟' : 'Bullseye Sweet Spot!',
+                  subtitle: `${currentActive.name} nailed the center for +${points} candy! 🍬💥`,
+                }
+              : rating === 'great'
+              ? {
+                  src: '/videos/pinata/great.mp4',
+                  badge: '⭐ GREAT HIT! 💥',
+                  badgeBg: 'from-sky-400 via-indigo-500 to-purple-600',
+                  title: isGoldenBat ? '🌟 GOLDEN GREAT IMPACT! 🌟' : 'Solid Impact!',
+                  subtitle: `${currentActive.name} whacked the Piñata for +${points} candy! 🍬`,
+                }
+              : {
+                  src: '/videos/pinata/glance.mp4',
+                  badge: '🏏 GLANCING TAP! ⭐',
+                  badgeBg: 'from-pink-400 via-rose-500 to-purple-500',
+                  title: isGoldenBat ? '🌟 GOLDEN TAP! 🌟' : 'Glancing Tap!',
+                  subtitle: `${currentActive.name} clipped the Piñata for +${points} candy! 🍬`,
+                };
+
           setTimeout(() => {
-            setIsSwinging(false);
-            setFrozenSliderPos(null);
-            setLastHitRating(null);
-            setSwingEffect(null);
-            advanceToNextBatter(updatedPlayers, activePlayerIdx);
-          }, 1250);
+            setActiveVideo({
+              ...hitVideoConfig,
+              onComplete: () => {
+                setIsSwinging(false);
+                setFrozenSliderPos(null);
+                setLastHitRating(null);
+                setSwingEffect(null);
+                advanceToNextBatter(updatedPlayers, activePlayerIdx);
+              },
+            });
+          }, 400);
         }
       }, 350);
     },
-    [isSwinging, isGameOver, isBroken, players, activePlayerIdx, pinataHp, advanceToNextBatter]
+    [isSwinging, isGameOver, isBroken, activeVideo, players, activePlayerIdx, pinataHp, advanceToNextBatter]
   );
 
   // Spacebar keyboard listener to swing
@@ -250,7 +337,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         const active = players[activePlayerIdx];
-        if (active && !active.isBot && !isSwinging && !isGameOver && !isBroken) {
+        if (active && !active.isBot && !isSwinging && !isGameOver && !isBroken && !activeVideo) {
           e.preventDefault();
           handleSwing();
         }
@@ -258,12 +345,12 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [players, activePlayerIdx, isSwinging, isGameOver, isBroken, handleSwing]);
+  }, [players, activePlayerIdx, isSwinging, isGameOver, isBroken, activeVideo, handleSwing]);
 
   // AI Bot Swing Loop: Bot timing precision scales with berry count!
   useEffect(() => {
     const active = players[activePlayerIdx];
-    if (!active || !active.isBot || isSwinging || isGameOver || isBroken) {
+    if (!active || !active.isBot || isSwinging || isGameOver || isBroken || !!activeVideo) {
       return;
     }
 
@@ -579,9 +666,9 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           <button
             type="button"
             onClick={() => handleSwing()}
-            disabled={isSwinging || isGameOver || isBroken}
+            disabled={isSwinging || isGameOver || isBroken || !!activeVideo}
             className={`w-full max-w-md py-3.5 sm:py-4 rounded-2xl font-black text-lg sm:text-xl shadow-xl transition transform border-2 border-white/60 flex items-center justify-center gap-3 cursor-pointer ${
-              isSwinging || isGameOver || isBroken
+              isSwinging || isGameOver || isBroken || !!activeVideo
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : activePlayer.arrivedAtCastleOrder === 1
                 ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 hover:from-amber-500 hover:via-yellow-500 hover:to-orange-600 text-amber-950 hover:scale-105 active:scale-95 shadow-amber-500/40 ring-2 ring-yellow-300'
@@ -641,6 +728,17 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Piñata Video Modal (Starter, Glance, Great, Sweet Spot, Burst) */}
+      <PinataVideoModal
+        isOpen={!!activeVideo}
+        videoSrc={activeVideo?.src || ''}
+        badge={activeVideo?.badge || ''}
+        badgeBg={activeVideo?.badgeBg}
+        title={activeVideo?.title || ''}
+        subtitle={activeVideo?.subtitle || ''}
+        onClose={handleCloseVideo}
+      />
     </div>
   );
 };

@@ -85,15 +85,20 @@ export const MoeZoomiesModal: React.FC<MoeZoomiesModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [_hasPlayed, setHasPlayed] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const hasStartedRef = useRef(false);
 
   const locInfo = landmarkId && MOE_VIDEOS[landmarkId] ? MOE_VIDEOS[landmarkId] : null;
 
   useEffect(() => {
     if (!isOpen || !locInfo) {
-      setHasPlayed(false);
+      hasStartedRef.current = false;
       return;
     }
+
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
 
     const video = videoRef.current;
     if (video) {
@@ -101,28 +106,21 @@ export const MoeZoomiesModal: React.FC<MoeZoomiesModalProps> = ({
       video.volume = 1.0;
       video.muted = false;
 
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setHasPlayed(true);
-          })
-          .catch((err) => {
-            console.warn('Unmuted autoplay prevented by browser policy, muting:', err);
-            video.muted = true;
-            setIsMuted(true);
-            video.play().then(() => setHasPlayed(true)).catch(console.error);
-          });
-      }
+      video.play().catch((err) => {
+        console.warn('Unmuted autoplay prevented by browser policy, muting:', err);
+        video.muted = true;
+        setIsMuted(true);
+        video.play().catch(console.error);
+      });
     }
 
     // Safety timeout: automatically close after 12 seconds if video ends or stalls
     const timeout = setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 12000);
 
     return () => clearTimeout(timeout);
-  }, [isOpen, locInfo, onClose]);
+  }, [isOpen, locInfo]);
 
   if (!isOpen || !player || !locInfo) return null;
 
@@ -165,7 +163,6 @@ export const MoeZoomiesModal: React.FC<MoeZoomiesModalProps> = ({
             ref={videoRef}
             src={locInfo.video}
             playsInline
-            autoPlay
             onEnded={onClose}
             className="w-full h-full object-cover"
           />

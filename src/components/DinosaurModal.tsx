@@ -15,13 +15,18 @@ export const DinosaurModal: React.FC<DinosaurModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [_hasPlayed, setHasPlayed] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
-      setHasPlayed(false);
+      hasStartedRef.current = false;
       return;
     }
+
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
 
     const video = videoRef.current;
     if (video) {
@@ -29,29 +34,21 @@ export const DinosaurModal: React.FC<DinosaurModalProps> = ({
       video.volume = 1.0;
       video.muted = false;
 
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setHasPlayed(true);
-          })
-          .catch((err) => {
-            console.warn('Unmuted autoplay prevented by browser policy, muting:', err);
-            // Fallback: try muted autoplay if unmuted was blocked
-            video.muted = true;
-            setIsMuted(true);
-            video.play().then(() => setHasPlayed(true)).catch(console.error);
-          });
-      }
+      video.play().catch((err) => {
+        console.warn('Unmuted autoplay prevented by browser policy, muting:', err);
+        video.muted = true;
+        setIsMuted(true);
+        video.play().catch(console.error);
+      });
     }
 
     // Safety timeout: automatically close after 6.5 seconds if video ends or stalls
     const timeout = setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 6500);
 
     return () => clearTimeout(timeout);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen || !player) return null;
 
@@ -90,7 +87,6 @@ export const DinosaurModal: React.FC<DinosaurModalProps> = ({
             ref={videoRef}
             src="/dinosaur.mp4"
             playsInline
-            autoPlay
             onEnded={onClose}
             className="w-full h-full object-cover"
           />

@@ -68,6 +68,7 @@ export const App: React.FC = () => {
     elevatorName: string;
     updatedPlayers: Player[];
   } | null>(null);
+  const [isPinataVideoActive, setIsPinataVideoActive] = useState<boolean>(false);
   const [winner, setWinner] = useState<Player | null>(null);
   const [logs, setLogs] = useState<GameLogEntry[]>([]);
   const [soundOn, setSoundOn] = useState<boolean>(true);
@@ -902,7 +903,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
             {/* Right Header: Music Player & Game Action Buttons */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {/* Single Official Music Player at the top */}
-              <MusicPlayer autoPlay={true} isPausedByModal={!!dinosaurEvent || !!moeZoomiesEvent || !!lisbonTramEvent || !!elevatorEvent} />
+              <MusicPlayer autoPlay={true} isPausedByModal={!!dinosaurEvent || !!moeZoomiesEvent || !!lisbonTramEvent || !!elevatorEvent || isPinataVideoActive} />
 
               {/* Sound Effects Toggle */}
               <button
@@ -984,6 +985,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
           <PinataGame
             initialPlayers={players}
             onFinishPinata={handleFinishPinata}
+            onVideoPlayingChange={setIsPinataVideoActive}
           />
         </div>
       )}
