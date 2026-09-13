@@ -70,8 +70,6 @@ export const PinataGame: React.FC<PinataGameProps> = ({
   const [lastHitRating, setLastHitRating] = useState<'critical' | 'great' | 'glance' | null>(null);
   const sliderPosRef = useRef<number>(50);
 
-  const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Video State for Piñata Animations
   interface ActivePinataVideo {
     src: string;
@@ -166,17 +164,16 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     }, 4500);
   };
 
-  // Execute a timed swing
-  const handleSwing = useCallback(
-    (targetPos?: number) => {
-      if (isSwinging || isGameOver || isBroken) return;
-      const currentActive = players[activePlayerIdx];
-      if (!currentActive) return;
+  // Execute a timed swing (always measures the exact visual slider position)
+  const handleSwing = useCallback(() => {
+    if (isSwinging || isGameOver || isBroken) return;
+    const currentActive = players[activePlayerIdx];
+    if (!currentActive) return;
 
-      const hitPos = typeof targetPos === 'number' ? targetPos : sliderPosRef.current;
-      setFrozenSliderPos(hitPos);
-      setIsSwinging(true);
-      playBatWhoosh();
+    const hitPos = sliderPosRef.current;
+    setFrozenSliderPos(hitPos);
+    setIsSwinging(true);
+    playBatWhoosh();
 
       const isGoldenBat = currentActive.arrivedAtCastleOrder === 1;
 
@@ -347,37 +344,66 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [players, activePlayerIdx, isSwinging, isGameOver, isBroken, activeVideo, handleSwing]);
 
-  // AI Bot Swing Loop: Bot timing precision scales with berry count!
+  // AI Bot Swing Loop: Bot times its swing naturally as the slider sweeps across the timing track
   useEffect(() => {
     const active = players[activePlayerIdx];
     if (!active || !active.isBot || isSwinging || isGameOver || isBroken || !!activeVideo) {
       return;
     }
 
-    botTimerRef.current = setTimeout(() => {
-      const berries = active.berries;
-      // 0 berries: 35% sweet spot. 6+ berries: up to 85% sweet spot!
-      const sweetSpotChance = Math.min(0.85, 0.35 + berries * 0.08);
-      const roll = Math.random();
-      let botTargetPos = 50;
-      if (roll < sweetSpotChance) {
-        // Sweet spot (45% - 55%)
-        botTargetPos = 46 + Math.random() * 8;
-      } else if (roll < sweetSpotChance + 0.38) {
-        // Great hit (32% - 41% or 59% - 68%)
-        botTargetPos = Math.random() < 0.5 ? 32 + Math.random() * 9 : 59 + Math.random() * 9;
-      } else {
-        // Glancing tap (12% - 25% or 75% - 88%)
-        botTargetPos = Math.random() < 0.5 ? 12 + Math.random() * 13 : 75 + Math.random() * 13;
+    const berries = active.berries;
+    // Balanced realistic chances based on berry count:
+    // 0 berries: ~25% sweet, ~48% great, ~27% glance
+    // 3 berries: ~44% sweet, ~44% great, ~12% glance
+    // 6+ berries: ~60% sweet, ~34% great, ~6% glance
+    const sweetChance = Math.min(0.60, 0.25 + berries * 0.065);
+    const glanceChance = Math.max(0.06, 0.27 - berries * 0.035);
+    const roll = Math.random();
+
+    let targetPos: number;
+    if (roll < sweetChance) {
+      // Aim for Sweet Spot zone (44% to 56%)
+      targetPos = 46 + Math.random() * 8;
+    } else if (roll < sweetChance + glanceChance) {
+      // Glancing Tap zone (14% to 24% or 76% to 86%)
+      targetPos = Math.random() < 0.5 ? 14 + Math.random() * 10 : 76 + Math.random() * 10;
+    } else {
+      // Great Hit zone (30% to 40% or 60% to 70%)
+      targetPos = Math.random() < 0.5 ? 30 + Math.random() * 10 : 60 + Math.random() * 10;
+    }
+
+    // Give players a human-like moment (~800ms - 1300ms) to see the bot line up
+    const startTime = performance.now();
+    const minAimDelay = 800 + Math.random() * 500;
+
+    let frameId: number;
+    let hasSwung = false;
+
+    const checkSlider = () => {
+      if (hasSwung) return;
+      const now = performance.now();
+      const elapsed = now - startTime;
+
+      if (elapsed >= minAimDelay) {
+        const currentPos = sliderPosRef.current;
+        // Swing when slider is near targetPos (within 4.5%), or after 3.2s safety fallback
+        if (Math.abs(currentPos - targetPos) <= 4.5 || elapsed > 3200) {
+          hasSwung = true;
+          handleSwing();
+          return;
+        }
       }
 
-      handleSwing(botTargetPos);
-    }, 1400);
+      frameId = requestAnimationFrame(checkSlider);
+    };
+
+    frameId = requestAnimationFrame(checkSlider);
 
     return () => {
-      if (botTimerRef.current) clearTimeout(botTimerRef.current);
+      hasSwung = true;
+      cancelAnimationFrame(frameId);
     };
-  }, [players, activePlayerIdx, isSwinging, isGameOver, handleSwing]);
+  }, [players, activePlayerIdx, isSwinging, isGameOver, isBroken, activeVideo, handleSwing]);
 
   return (
     <div className="relative z-10 w-full max-w-5xl mx-auto px-2 sm:px-3 py-1.5 sm:py-3 flex flex-col items-center justify-center my-auto">

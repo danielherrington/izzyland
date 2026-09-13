@@ -100,16 +100,52 @@ export const App: React.FC = () => {
     }, 3500);
   };
 
-  // Start new game
-  const handleStartGame = (initialPlayers: Player[]) => {
-    setPlayers(initialPlayers);
-    setActivePlayerIndex(0);
-    setDeck(createFreshDeck());
+  // Reset all active gameplay and animation states back to setup
+  const handleResetToSetup = useCallback(() => {
+    if (botActionTimerRef.current) {
+      clearTimeout(botActionTimerRef.current);
+      botActionTimerRef.current = null;
+    }
+    setIsDrawing(false);
+    setMovingPlayerId(null);
     setCurrentCard(null);
-    setWinner(null);
     setTargetTileIndex(null);
     setPowerEvent(null);
     setLandmarkEvent(null);
+    setDinosaurEvent(null);
+    setMoeZoomiesEvent(null);
+    setLisbonTramEvent(null);
+    setElevatorEvent(null);
+    setIsPinataVideoActive(false);
+    setShowFreezePicker(false);
+    setNotification(null);
+    setWinner(null);
+    setGameState('setup');
+  }, []);
+
+  // Start new game
+  const handleStartGame = (initialPlayers: Player[]) => {
+    if (botActionTimerRef.current) {
+      clearTimeout(botActionTimerRef.current);
+      botActionTimerRef.current = null;
+    }
+    setIsDrawing(false);
+    setMovingPlayerId(null);
+    setCurrentCard(null);
+    setTargetTileIndex(null);
+    setPowerEvent(null);
+    setLandmarkEvent(null);
+    setDinosaurEvent(null);
+    setMoeZoomiesEvent(null);
+    setLisbonTramEvent(null);
+    setElevatorEvent(null);
+    setIsPinataVideoActive(false);
+    setShowFreezePicker(false);
+    setNotification(null);
+    setWinner(null);
+    setPlayers(initialPlayers);
+    setActivePlayerIndex(0);
+    setDeck(createFreshDeck());
     setLogs([]);
     setGameState('playing');
     addLog(`✨ Welcome to Izzyland! Collect 5 Chocolates to unlock the Piñata Castle!`, 'move');
@@ -630,6 +666,9 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
         active.hasWon = true;
         updatedPlayers[activePlayerIndex] = active;
         setPlayers(updatedPlayers);
+        setIsDrawing(false);
+        setMovingPlayerId(null);
+        setTargetTileIndex(null);
         playVictory();
         fireVictoryConfetti();
         addLog(`👑 ${active.name} entered Izzy's Castle with all chocolates! IT'S PIÑATA TIME!`, 'win');
@@ -651,6 +690,9 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
           active.hasWon = true;
           updatedPlayers[activePlayerIndex] = active;
           setPlayers(updatedPlayers);
+          setIsDrawing(false);
+          setMovingPlayerId(null);
+          setTargetTileIndex(null);
           playVictory();
           fireVictoryConfetti();
           addLog(`👑 Castle Guards gifted ${active.name} +2 Royal Chocolates (${active.chocolates}/${REQUIRED_CHOCOLATES})! The Castle Gate swings open!`, 'win');
@@ -956,7 +998,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
               {/* Start New Game Button */}
               <button
                 type="button"
-                onClick={() => setGameState('setup')}
+                onClick={handleResetToSetup}
                 className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition border shadow-sm cursor-pointer bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-900 border-purple-300 active:scale-95"
                 title="Start New Game"
               >
@@ -1160,9 +1202,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
         <WinnerModal
           winner={winner}
           allPlayers={players}
-          onPlayAgain={() => {
-            setGameState('setup');
-          }}
+          onPlayAgain={handleResetToSetup}
         />
       )}
 
