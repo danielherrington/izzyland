@@ -94,40 +94,40 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-3 py-1.5 rounded-2xl border-2 border-pink-300 shadow-sm">
+    <div className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl border-2 border-pink-300 shadow-sm flex-shrink-0">
       {/* Play/Pause Button */}
       <button
         type="button"
         onClick={togglePlay}
-        className={`p-2 rounded-xl text-white font-bold transition transform active:scale-95 flex items-center justify-center cursor-pointer shadow-md ${
+        className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-white font-bold transition transform active:scale-95 flex items-center justify-center cursor-pointer shadow-md ${
           isPlaying
             ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
             : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
         }`}
         title={isPlaying ? 'Pause Izzyland Song' : 'Play Izzyland Song'}
       >
-        {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+        {isPlaying ? <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" /> : <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />}
       </button>
 
       {/* Song Info & Animated Equalizer */}
-      <div className="flex flex-col min-w-0 pr-1">
-        <div className="flex items-center gap-1.5">
-          <Music className="w-3.5 h-3.5 text-pink-600 animate-bounce" />
-          <span className="text-[11px] font-black text-pink-800 truncate">
+      <div className="flex flex-col min-w-0 pr-0.5 sm:pr-1">
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          <Music className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-600 animate-bounce" />
+          <span className="text-[10px] sm:text-[11px] font-black text-pink-800 truncate hidden md:inline">
             Izzyland Song
           </span>
         </div>
 
         {/* Equalizer Waveform Bars */}
         {isPlaying ? (
-          <div className="flex items-end gap-0.5 h-2.5 mt-0.5">
-            <span className="w-1 bg-pink-500 rounded-full h-full animate-pulse" />
-            <span className="w-1 bg-purple-500 rounded-full h-2/3 animate-bounce" />
-            <span className="w-1 bg-yellow-400 rounded-full h-full animate-ping" />
-            <span className="w-1 bg-sky-400 rounded-full h-1/2 animate-pulse" />
+          <div className="flex items-end gap-0.5 h-2 sm:h-2.5 mt-0.5">
+            <span className="w-0.5 sm:w-1 bg-pink-500 rounded-full h-full animate-pulse" />
+            <span className="w-0.5 sm:w-1 bg-purple-500 rounded-full h-2/3 animate-bounce" />
+            <span className="w-0.5 sm:w-1 bg-yellow-400 rounded-full h-full animate-ping" />
+            <span className="w-0.5 sm:w-1 bg-sky-400 rounded-full h-1/2 animate-pulse" />
           </div>
         ) : (
-          <span className="text-[9px] font-bold text-gray-400">Paused</span>
+          <span className="text-[8px] sm:text-[9px] font-bold text-gray-400">Paused</span>
         )}
       </div>
 

@@ -46,7 +46,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   }, [players]);
 
   return (
-    <div className="relative h-full max-h-full w-auto max-w-full aspect-[5/4] rounded-3xl overflow-hidden shadow-xl border-4 border-pink-300 bg-gradient-to-b from-sky-100 via-pink-50 to-purple-100 select-none mx-auto flex items-center justify-center p-1 sm:p-1.5">
+    <div className="relative h-full max-h-full w-auto max-w-full aspect-[5/4] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-2 sm:border-4 border-pink-300 bg-gradient-to-b from-sky-100 via-pink-50 to-purple-100 select-none mx-auto flex items-center justify-center p-0.5 sm:p-1.5">
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="w-full h-full block object-contain"

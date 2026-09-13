@@ -775,12 +775,12 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
       {gameState === 'playing' && (
         <div className="relative z-10 w-full max-w-[1720px] mx-auto h-full max-h-full flex flex-col gap-1 sm:gap-1.5 overflow-hidden">
           {/* Top Header Bar - Single Non-Wrapping Row */}
-          <header className="flex-shrink-0 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2.5 bg-white/85 backdrop-blur-md px-2.5 sm:px-3.5 py-1 rounded-2xl border-2 border-pink-200 shadow-sm overflow-hidden">
+          <header className="flex-shrink-0 flex flex-nowrap items-center justify-between gap-1 sm:gap-2.5 bg-white/85 backdrop-blur-md px-1.5 sm:px-3.5 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl border-2 border-pink-200 shadow-sm overflow-hidden">
             {/* Logo */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <span className="text-lg sm:text-xl">✨</span>
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              <span className="text-base sm:text-xl">✨</span>
               <div>
-                <h1 className="text-sm sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 leading-tight">
+                <h1 className="text-xs sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 leading-tight">
                   IZZYLAND
                 </h1>
                 <p className="hidden 2xl:block text-[8px] font-bold text-gray-500 uppercase tracking-widest">
@@ -791,34 +791,34 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
 
             {/* Active Turn Banner & Live Player Inventory (Current Player Only) */}
             {activePlayer && (
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-pink-100/90 via-purple-50/90 to-sky-100/90 border-2 border-pink-300 px-2 sm:px-3 py-1 rounded-xl shadow-inner flex-shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-pink-100/90 via-purple-50/90 to-sky-100/90 border-2 border-pink-300 px-1 sm:px-3 py-0.5 sm:py-1 rounded-xl shadow-inner flex-shrink-0 min-w-0">
                 {/* Active Player Info */}
-                <div className="flex items-center gap-1.5 pr-1.5 sm:pr-2 border-r border-pink-200">
+                <div className="flex items-center gap-1 sm:gap-1.5 pr-1 sm:pr-2 border-r border-pink-200 min-w-0">
                   <div
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-base sm:text-lg shadow-inner border border-white flex-shrink-0"
+                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-sm sm:text-lg shadow-inner border border-white flex-shrink-0"
                     style={{ backgroundColor: activePlayer.avatarColor + '33' }}
                   >
                     {activePlayer.avatar}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs sm:text-sm font-black text-gray-900 truncate max-w-[70px] sm:max-w-[110px]">
+                      <span className="text-[11px] sm:text-sm font-black text-gray-900 truncate max-w-[48px] sm:max-w-[110px]">
                         {activePlayer.name}
                       </span>
                       {activePlayer.isBot ? (
-                        <span className="text-[8px] sm:text-[9px] bg-purple-200 text-purple-800 font-extrabold px-1 py-0.2 rounded">
+                        <span className="text-[7px] sm:text-[9px] bg-purple-200 text-purple-800 font-extrabold px-1 py-0.2 rounded">
                           BOT
                         </span>
                       ) : (
-                        <span className="text-[8px] sm:text-[9px] bg-gradient-to-r from-pink-500 to-purple-500 text-white font-black px-1.5 py-0.2 rounded-full shadow-sm animate-pulse">
+                        <span className="text-[7px] sm:text-[9px] bg-gradient-to-r from-pink-500 to-purple-500 text-white font-black px-1 sm:px-1.5 py-0.2 rounded-full shadow-sm animate-pulse">
                           TURN ✨
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-gray-500">
+                    <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-bold text-gray-500">
                       <span>Tile {activePlayer.tileIndex}/63</span>
                       {activePlayer.skipNextTurn && (
-                        <span className="text-[8px] text-sky-700 font-black bg-sky-100 px-1 rounded">
+                        <span className="text-[7px] text-sky-700 font-black bg-sky-100 px-1 rounded">
                           ❄️ FROZEN
                         </span>
                       )}
@@ -827,27 +827,27 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
                 </div>
 
                 {/* Chocolates Collection Progress (Compact) */}
-                <div className="flex items-center gap-1 px-1 sm:px-1.5 border-r border-pink-200">
-                  <span className="text-sm sm:text-base">🍫</span>
-                  <span className="text-xs sm:text-sm font-black text-amber-900">
+                <div className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 border-r border-pink-200">
+                  <span className="text-xs sm:text-base">🍫</span>
+                  <span className="text-[11px] sm:text-sm font-black text-amber-900">
                     {activePlayer.chocolates}/{REQUIRED_CHOCOLATES}
                   </span>
                   {activePlayer.chocolates >= REQUIRED_CHOCOLATES && (
-                    <span className="text-[8px] sm:text-[9px] font-black text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-300 animate-pulse whitespace-nowrap">
+                    <span className="text-[7px] sm:text-[9px] font-black text-emerald-700 bg-emerald-100 px-1 sm:px-1.5 py-0.2 rounded-full border border-emerald-300 animate-pulse whitespace-nowrap">
                       KEY 🔑
                     </span>
                   )}
                 </div>
 
                 {/* Sparkle Berries */}
-                <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black text-pink-700">
-                  <span className="text-sm sm:text-base">🍓</span>
+                <div className="flex items-center gap-0.5 text-[11px] sm:text-sm font-black text-pink-700">
+                  <span className="text-xs sm:text-base">🍓</span>
                   <span>x{activePlayer.berries}</span>
                 </div>
 
-                {/* Quick Actions (Freeze & Trade) for Active Human Player */}
+                {/* Quick Actions (Freeze & Trade) for Active Human Player (Large Screens) */}
                 {!activePlayer.isBot && (
-                  <div className="flex items-center gap-1 pl-1.5 border-l border-pink-200">
+                  <div className="hidden xl:flex items-center gap-1 pl-1.5 border-l border-pink-200">
                     <button
                       type="button"
                       onClick={handleTradeBerriesForChocolate}
@@ -927,7 +927,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
             )}
 
             {/* Right Header: Music Player & Game Action Buttons */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               {/* Single Official Music Player at the top */}
               <MusicPlayer autoPlay={true} isPausedByModal={!!dinosaurEvent || !!moeZoomiesEvent || !!lisbonTramEvent || !!elevatorEvent || isPinataVideoActive} />
 
@@ -935,7 +935,7 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
               <button
                 type="button"
                 onClick={handleToggleSound}
-                className="p-1.5 sm:p-2 rounded-xl bg-pink-50 text-pink-700 hover:bg-pink-100 transition border border-pink-200 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-pink-50 text-pink-700 hover:bg-pink-100 transition border border-pink-200 cursor-pointer"
                 title={soundOn ? 'Mute Sound Effects' : 'Enable Sound Effects'}
               >
                 {soundOn ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />}
@@ -945,10 +945,10 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
               <button
                 type="button"
                 onClick={() => setShowInstructions(true)}
-                className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition border shadow-sm cursor-pointer bg-gradient-to-r from-amber-100 to-yellow-100 hover:from-amber-200 hover:to-yellow-200 text-amber-900 border-amber-300 active:scale-95"
+                className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition border shadow-sm cursor-pointer bg-gradient-to-r from-amber-100 to-yellow-100 hover:from-amber-200 hover:to-yellow-200 text-amber-900 border-amber-300 active:scale-95"
                 title="View Game Rules & Instructions"
               >
-                <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
                 <span className="hidden sm:inline">Rules 📖</span>
                 <span className="sm:hidden">📖</span>
               </button>
@@ -957,10 +957,10 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
               <button
                 type="button"
                 onClick={() => setGameState('setup')}
-                className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition border shadow-sm cursor-pointer bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-900 border-purple-300 active:scale-95"
+                className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black transition border shadow-sm cursor-pointer bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-900 border-purple-300 active:scale-95"
                 title="Start New Game"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-purple-700" />
+                <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-700" />
                 <span className="hidden sm:inline">New Game</span>
                 <span className="sm:hidden">New</span>
               </button>
@@ -968,9 +968,9 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
           </header>
 
           {/* Main Play Area - Spacious Board-First Design */}
-          <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row gap-1.5 sm:gap-2 items-center lg:items-stretch justify-center overflow-hidden">
+          <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row gap-1.5 sm:gap-2 items-center lg:items-stretch justify-center overflow-y-auto lg:overflow-hidden scroll-touch">
             {/* Primary Focus: Large Game Board */}
-            <div className="flex-1 min-h-0 min-w-0 h-full max-h-full w-full flex items-center justify-center overflow-hidden order-1">
+            <div className="flex-1 min-h-0 min-w-0 w-full lg:h-full max-h-full flex items-center justify-center overflow-hidden order-1 flex-shrink">
               <GameBoard
                 tiles={BOARD_TILES}
                 players={players}
@@ -980,10 +980,10 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
               />
             </div>
 
-            {/* Side Console on Desktop & iPad: Card Deck + Live Game Log */}
-            <div className="w-full lg:w-60 xl:w-72 flex-shrink-0 h-auto lg:h-full max-h-full flex flex-row lg:flex-col gap-2 overflow-hidden order-2 justify-center items-center lg:items-stretch">
-              {/* Card Deck Area */}
-              <div className="w-auto lg:w-full flex-shrink-0 flex flex-col items-center">
+            {/* Bottom Console on Mobile (< lg) / Side Console on Desktop & iPad (lg:) */}
+            <div className="w-full lg:w-60 xl:w-72 flex-shrink-0 h-auto lg:h-full max-h-full flex flex-row lg:flex-col gap-1.5 sm:gap-2 overflow-visible order-2 justify-center items-stretch px-0.5 sm:px-0">
+              {/* Card Deck Area (50% on mobile, 100% on desktop) */}
+              <div className="flex-1 min-w-0 max-w-[50%] lg:max-w-none lg:w-full flex-shrink-0 flex flex-col items-center">
                 {activePlayer && (
                   <CardDeck
                     currentCard={currentCard}
@@ -996,138 +996,147 @@ function estimateCardMove(card: GameCard, currentIndex: number): number {
                 )}
               </div>
 
-              {/* Sparkle Berry Powers (Trade & Freeze) - Dedicated Side Console Card */}
+              {/* Sparkle Berry Powers (Trade & Freeze) (50% on mobile, 100% on desktop) */}
               {activePlayer && (
-                <div className="w-full bg-white/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border-2 border-pink-300 shadow-md flex flex-col gap-1.5 flex-shrink-0">
-                  {/* Header with Berry Count */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-pink-700 uppercase tracking-wide">
-                      <Sparkles className="w-3.5 h-3.5 text-pink-500 animate-pulse" />
-                      <span>Berry Powers</span>
+                <div className="flex-1 min-w-0 max-w-[50%] lg:max-w-none lg:w-full bg-white/95 backdrop-blur-md rounded-2xl p-1.5 sm:p-2.5 lg:p-3 border-2 border-pink-300 shadow-md flex flex-col justify-between flex-shrink-0 relative">
+                  <div>
+                    {/* Header with Berry Count */}
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black text-pink-700 uppercase tracking-wide truncate">
+                        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-500 animate-pulse flex-shrink-0" />
+                        <span className="truncate">Berry Powers</span>
+                      </div>
+                      <div className="flex items-center gap-0.5 text-[9px] sm:text-xs font-black bg-pink-100 text-pink-800 px-1.5 py-0.2 rounded-full border border-pink-200 shadow-xs flex-shrink-0">
+                        <span>🍓</span>
+                        <span>{activePlayer.berries}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs font-black bg-pink-100 text-pink-800 px-2 py-0.5 rounded-full border border-pink-200 shadow-xs">
-                      <span>🍓</span>
-                      <span>{activePlayer.berries}</span>
-                    </div>
-                  </div>
 
-                  {/* Human Player Action Buttons */}
-                  {!activePlayer.isBot ? (
-                    <div className="flex flex-col gap-1.5 mt-0.5">
-                      {/* Trade Berries Button */}
-                      <button
-                        type="button"
-                        onClick={handleTradeBerriesForChocolate}
-                        disabled={!canTradeBerries}
-                        className={`w-full py-1.5 px-2.5 rounded-xl font-black text-xs transition flex items-center justify-between border shadow-sm ${
-                          canTradeBerries
-                            ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-amber-950 border-amber-300 cursor-pointer active:scale-95 shadow-amber-300/40 animate-pulse'
-                            : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                        }`}
-                        title={
-                          activePlayer.chocolates >= REQUIRED_CHOCOLATES
-                            ? 'Castle Gate already unlocked!'
-                            : activePlayer.berries < 2
-                            ? 'Need 2 Sparkle Berries to trade for 1 Chocolate'
-                            : 'Trade 2 Sparkle Berries for 1 Chocolate Candy'
-                        }
-                      >
-                        <span className="flex items-center gap-1">
-                          <span>🍬</span> Trade for Chocolate
-                        </span>
-                        <span className="text-[10px] font-extrabold opacity-90">
-                          {activePlayer.chocolates >= REQUIRED_CHOCOLATES
-                            ? '5/5 🍫'
-                            : '2 🍓 ➔ 1 🍫'}
-                        </span>
-                      </button>
-
-                      {/* Freeze Opponent Button */}
-                      <div className="relative">
+                    {/* Human Player Action Buttons */}
+                    {!activePlayer.isBot ? (
+                      <div className="flex flex-col gap-1 sm:gap-1.5">
+                        {/* Trade Berries Button */}
                         <button
                           type="button"
-                          onClick={() => setShowFreezePicker((prev) => !prev)}
-                          disabled={!canCastFreeze && !showFreezePicker}
-                          className={`w-full py-1.5 px-2.5 rounded-xl font-black text-xs transition flex items-center justify-between border shadow-sm ${
-                            canCastFreeze
-                              ? 'bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-500 hover:to-indigo-600 text-white border-sky-300 cursor-pointer active:scale-95 shadow-sky-300/40'
+                          onClick={handleTradeBerriesForChocolate}
+                          disabled={!canTradeBerries}
+                          className={`w-full py-1.5 sm:py-2 px-1.5 sm:px-2.5 rounded-xl font-black text-[10px] sm:text-xs transition flex items-center justify-between border shadow-sm ${
+                            canTradeBerries
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-amber-950 border-amber-300 cursor-pointer active:scale-95 shadow-amber-300/40 animate-pulse'
                               : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                           }`}
                           title={
-                            activePlayer.berries < BERRY_FREEZE_COST
-                              ? 'Need 2 Sparkle Berries to freeze an opponent'
-                              : 'Freeze an opponent so they skip their next turn!'
+                            activePlayer.chocolates >= REQUIRED_CHOCOLATES
+                              ? 'Castle Gate already unlocked!'
+                              : activePlayer.berries < 2
+                              ? 'Need 2 Sparkle Berries to trade for 1 Chocolate'
+                              : 'Trade 2 Sparkle Berries for 1 Chocolate Candy'
                           }
                         >
-                          <span className="flex items-center gap-1">
-                            <Snowflake className="w-3.5 h-3.5" /> Freeze Opponent
+                          <span className="flex items-center gap-1 truncate">
+                            <span>🍬</span>
+                            <span className="truncate">Trade 🍫</span>
                           </span>
-                          <span className="text-[10px] font-extrabold opacity-90">
-                            Costs 2 🍓
+                          <span className="text-[9px] sm:text-[10px] font-extrabold flex-shrink-0 ml-1">
+                            {activePlayer.chocolates >= REQUIRED_CHOCOLATES
+                              ? '5/5 🍫'
+                              : '2🍓➔1🍫'}
                           </span>
                         </button>
 
-                        {/* Opponent Picker Dropdown */}
-                        {showFreezePicker && (
-                          <div className="absolute left-0 right-0 bottom-full mb-2 bg-white p-2.5 rounded-2xl shadow-2xl border-2 border-sky-300 z-50 animate-scale-up flex flex-col gap-1.5 min-w-[200px]">
-                            <div className="flex items-center justify-between px-1">
-                              <span className="text-[10px] font-black text-sky-900 uppercase tracking-wider">
-                                Choose Player to Freeze:
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setShowFreezePicker(false)}
-                                className="text-gray-400 hover:text-gray-600 text-xs font-bold px-1"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            {players
-                              .filter((p) => p.id !== activePlayer.id)
-                              .map((target) => (
+                        {/* Freeze Opponent Button */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowFreezePicker((prev) => !prev)}
+                            disabled={!canCastFreeze && !showFreezePicker}
+                            className={`w-full py-1.5 sm:py-2 px-1.5 sm:px-2.5 rounded-xl font-black text-[10px] sm:text-xs transition flex items-center justify-between border shadow-sm ${
+                              canCastFreeze
+                                ? 'bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-500 hover:to-indigo-600 text-white border-sky-300 cursor-pointer active:scale-95 shadow-sky-300/40'
+                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                            }`}
+                            title={
+                              activePlayer.berries < BERRY_FREEZE_COST
+                                ? 'Need 2 Sparkle Berries to freeze an opponent'
+                                : 'Freeze an opponent so they skip their next turn!'
+                            }
+                          >
+                            <span className="flex items-center gap-1 truncate">
+                              <Snowflake className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                              <span className="truncate">Freeze Opponent</span>
+                            </span>
+                            <span className="text-[9px] sm:text-[10px] font-extrabold flex-shrink-0 ml-1">
+                              2 🍓
+                            </span>
+                          </button>
+
+                          {/* Opponent Picker Dropdown */}
+                          {showFreezePicker && (
+                            <div className="absolute left-0 right-0 sm:right-auto bottom-full mb-1 bg-white p-2 rounded-2xl shadow-2xl border-2 border-sky-300 z-50 animate-scale-up flex flex-col gap-1 min-w-[170px] sm:min-w-[200px]">
+                              <div className="flex items-center justify-between px-1">
+                                <span className="text-[9px] sm:text-[10px] font-black text-sky-900 uppercase tracking-wider">
+                                  Freeze Opponent (-2🍓):
+                                </span>
                                 <button
-                                  key={target.id}
                                   type="button"
-                                  disabled={target.skipNextTurn}
-                                  onClick={() => {
-                                    handleCastFreeze(target.id);
-                                    setShowFreezePicker(false);
-                                  }}
-                                  className={`px-2 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center justify-between border ${
-                                    target.skipNextTurn
-                                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                      : 'hover:bg-sky-50 text-gray-800 border-transparent hover:border-sky-200 cursor-pointer active:scale-95'
-                                  }`}
+                                  onClick={() => setShowFreezePicker(false)}
+                                  className="text-gray-400 hover:text-gray-600 text-xs font-bold px-1"
                                 >
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    <span className="text-base">{target.avatar}</span>
-                                    <span className="truncate">{target.name}</span>
-                                  </div>
-                                  {target.skipNextTurn ? (
-                                    <span className="text-[9px] font-black text-sky-700 bg-sky-100 px-1 rounded">
-                                      Frozen ❄️
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-black text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200">
-                                      Freeze! ❄️
-                                    </span>
-                                  )}
+                                  ✕
                                 </button>
-                              ))}
-                          </div>
-                        )}
+                              </div>
+                              {players
+                                .filter((p) => p.id !== activePlayer.id)
+                                .map((target) => (
+                                  <button
+                                    key={target.id}
+                                    type="button"
+                                    disabled={target.skipNextTurn}
+                                    onClick={() => {
+                                      handleCastFreeze(target.id);
+                                      setShowFreezePicker(false);
+                                    }}
+                                    className={`px-2 py-1 rounded-xl font-extrabold text-[11px] transition flex items-center justify-between border ${
+                                      target.skipNextTurn
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                        : 'hover:bg-sky-50 text-gray-800 border-transparent hover:border-sky-200 cursor-pointer active:scale-95'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <span className="text-sm">{target.avatar}</span>
+                                      <span className="truncate">{target.name}</span>
+                                    </div>
+                                    {target.skipNextTurn ? (
+                                      <span className="text-[8px] font-black text-sky-700 bg-sky-100 px-1 rounded">
+                                        Frozen ❄️
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] font-black text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200">
+                                        Freeze! ❄️
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] font-bold text-gray-500 text-center py-1 bg-gray-50 rounded-xl border border-gray-100">
-                      🤖 {activePlayer.name} is deciding...
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-[10px] sm:text-[11px] font-bold text-gray-500 text-center py-1 bg-gray-50 rounded-xl border border-gray-100">
+                        🤖 {activePlayer.name} deciding...
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Subtle helper note */}
+                  <div className="text-[9px] text-pink-500/80 font-bold text-center mt-0.5 hidden sm:block">
+                    🍓 Berries unlock sweet powers!
+                  </div>
                 </div>
               )}
 
               {/* Live Game Log */}
-              <div className="flex-1 min-h-0 min-w-0 w-full flex-col overflow-hidden hidden md:flex">
+              <div className="flex-1 min-h-0 min-w-0 w-full flex-col overflow-hidden hidden lg:flex">
                 <GameLog entries={logs} />
               </div>
             </div>
