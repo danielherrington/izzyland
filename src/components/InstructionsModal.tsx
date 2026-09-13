@@ -79,7 +79,7 @@ export const InstructionsModal: React.FC<InstructionsModalProps> = ({ isOpen, on
                 <strong>Cast Freeze Attack (Costs {BERRY_FREEZE_COST} 🍓):</strong> Freeze an opponent so they skip their next turn!
               </li>
               <li>
-                <strong>Piñata Swings:</strong> Every berry you hold when entering the Castle becomes a swing at the Piñata!
+                <strong>Piñata Slow-Mo Advantage:</strong> Every berry you hold when entering the Castle slows down the Piñata hit slider, making it easier to land Sweet Spot hits!
               </li>
             </ul>
           </div>
@@ -158,7 +158,7 @@ export const InstructionsModal: React.FC<InstructionsModalProps> = ({ isOpen, on
                 <strong>🍓 Sparkle Berry Advantage:</strong> Every berry you collect in the race slows down the timing slider, making it super easy to hit the Sweet Spot!
               </li>
               <li>
-                <strong>1st to Castle Advantage:</strong> Swings first, receives <strong>+6 Bonus Swings</strong>, and wields the <strong>🌟 Golden Mega Bat 🌟</strong> (2x damage and 2x candy points)!
+                <strong>1st to Castle Advantage:</strong> Steps up to bat first and wields the <strong>🌟 Golden Mega Bat 🌟</strong> (2x damage and 2x candy points on every swing)!
               </li>
               <li>
                 <strong>Whack to Win:</strong> Whoever collects the most candy from the Piñata wins the championship!

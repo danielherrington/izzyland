@@ -20,28 +20,22 @@ export const PinataGame: React.FC<PinataGameProps> = ({
   initialPlayers,
   onFinishPinata,
 }) => {
-  // Initialize players with swings: each player gets around 3 swings (3 base, +1 bonus for 1st to castle)
+  // Initialize players
   const [players, setPlayers] = useState<Player[]>(() => {
-    return initialPlayers.map((p) => {
-      // 3 swings base for every player, +1 bonus swing for 1st to castle (total 4)
-      const arrivalBonus = p.arrivedAtCastleOrder === 1 ? 1 : 0;
-      const totalSwings = 3 + arrivalBonus;
-      return {
-        ...p,
-        pinataSwings: totalSwings,
-        pinataCandy: 0,
-      };
-    });
+    return initialPlayers.map((p) => ({
+      ...p,
+      pinataCandy: 0,
+      pinataSwings: 0,
+    }));
   });
 
-  // Calculate total initial swings to scale Piñata Max HP so all players get to enjoy their ~3 swings
+  // Size Piñata HP so each player gets around 3 swings on average:
+  // With Golden Mega Bat on 1st player (~44 avg dmg) and regular bat on others (~22 avg dmg),
+  // each full round averages ~[44 + (N-1)*22] dmg. 3 rounds ≈ 3 * [44 + (N-1)*22].
   const [maxPinataHp] = useState<number>(() => {
-    const totalSwings = initialPlayers.reduce(
-      (acc, p) => acc + (3 + (p.arrivedAtCastleOrder === 1 ? 1 : 0)),
-      0
-    );
-    // Tuned so that the piñata absorbs hits throughout all rounds
-    return Math.max(180, totalSwings * 24);
+    const n = Math.max(1, initialPlayers.length);
+    const roundAvgDmg = 44 + (n - 1) * 22;
+    return Math.max(180, Math.round(roundAvgDmg * 3));
   });
 
   // First to reach the castle always bats first!
@@ -51,11 +45,9 @@ export const PinataGame: React.FC<PinataGameProps> = ({
   });
 
   const [pinataHp, setPinataHp] = useState<number>(() => {
-    const totalSwings = initialPlayers.reduce(
-      (acc, p) => acc + (3 + (p.arrivedAtCastleOrder === 1 ? 1 : 0)),
-      0
-    );
-    return Math.max(180, totalSwings * 24);
+    const n = Math.max(1, initialPlayers.length);
+    const roundAvgDmg = 44 + (n - 1) * 22;
+    return Math.max(180, Math.round(roundAvgDmg * 3));
   });
 
   const [isSwinging, setIsSwinging] = useState<boolean>(false);
@@ -86,7 +78,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
   // RequestAnimationFrame oscillator for the timing meter
   useEffect(() => {
-    if (isSwinging || isGameOver) return;
+    if (isSwinging || isGameOver || isBroken) return;
 
     let animId: number;
     const startTime = performance.now();
@@ -103,23 +95,12 @@ export const PinataGame: React.FC<PinataGameProps> = ({
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isSwinging, isGameOver, cycleDurationMs]);
+  }, [isSwinging, isGameOver, isBroken, cycleDurationMs]);
 
-  // Advance turn to the next player who has swings left
+  // Advance turn round-robin to the next player
   const advanceToNextBatter = useCallback((currentPlayers: Player[], startIdx: number) => {
-    let nextIdx = (startIdx + 1) % currentPlayers.length;
-    let checked = 0;
-    while (currentPlayers[nextIdx].pinataSwings <= 0 && checked < currentPlayers.length) {
-      nextIdx = (nextIdx + 1) % currentPlayers.length;
-      checked++;
-    }
-
-    if (checked >= currentPlayers.length || currentPlayers.every((p) => p.pinataSwings <= 0)) {
-      // No more swings left for anyone!
-      handleFinalCelebration(currentPlayers);
-    } else {
-      setActivePlayerIdx(nextIdx);
-    }
+    const nextIdx = (startIdx + 1) % currentPlayers.length;
+    setActivePlayerIdx(nextIdx);
   }, []);
 
   // Final celebration & ranking
@@ -140,9 +121,9 @@ export const PinataGame: React.FC<PinataGameProps> = ({
   // Execute a timed swing
   const handleSwing = useCallback(
     (targetPos?: number) => {
-      if (isSwinging || isGameOver) return;
+      if (isSwinging || isGameOver || isBroken) return;
       const currentActive = players[activePlayerIdx];
-      if (!currentActive || currentActive.pinataSwings <= 0) return;
+      if (!currentActive) return;
 
       const hitPos = typeof targetPos === 'number' ? targetPos : sliderPosRef.current;
       setFrozenSliderPos(hitPos);
@@ -199,12 +180,12 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           playWhack();
         }
 
-        // Update player state first
+        // Update player candy and swings taken
         const updatedPlayers = players.map((p, idx) => {
           if (idx === activePlayerIdx) {
             return {
               ...p,
-              pinataSwings: p.pinataSwings - 1,
+              pinataSwings: (p.pinataSwings || 0) + 1,
               pinataCandy: p.pinataCandy + points,
             };
           }
@@ -212,14 +193,8 @@ export const PinataGame: React.FC<PinataGameProps> = ({
         });
         setPlayers(updatedPlayers);
 
-        // Count total remaining swings across all players:
-        const totalRemainingSwings = updatedPlayers.reduce((acc, p) => acc + p.pinataSwings, 0);
-
-        // PACING PROTECTION:
-        // Ensure the Piñata doesn't break early so each player gets around 3 swings!
-        // If there are more than 2 swings left across all players, keep durability clamped at min 8% (heavy cracks & sparks, but won't burst early).
-        const minAllowedHp = totalRemainingSwings > 2 ? Math.max(12, Math.round(maxPinataHp * 0.08)) : 0;
-        const newHp = Math.max(minAllowedHp, pinataHp - damage);
+        // Calculate new HP based purely on timing accuracy and damage dealt
+        const newHp = Math.max(0, pinataHp - damage);
         setPinataHp(newHp);
 
         const candyIcons = ['🍫', '🍬', '🍭', '🍩', '✨'];
@@ -240,15 +215,14 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           rating,
         });
 
-        // Check if pinata burst (either HP dropped to 0 in final round, or final swing across all players)
-        const shouldBurst = (newHp === 0 || totalRemainingSwings === 0) && !isBroken;
-        if (shouldBurst) {
+        // Spontaneous burst when HP reaches 0!
+        if (newHp === 0 && !isBroken) {
           setIsBroken(true);
           setPinataHp(0);
           playPinataExplosion();
           fireVictoryConfetti();
 
-          // Award giant finish bonus to active batter (500 for Golden Bat, 300 for regular)
+          // Award giant finish bonus to active batter who cracked it open!
           const burstBonus = isGoldenBat ? 500 : 300;
           updatedPlayers[activePlayerIdx].pinataCandy += burstBonus;
           setPlayers([...updatedPlayers]);
@@ -257,7 +231,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
             handleFinalCelebration(updatedPlayers);
           }, 2400);
         } else {
-          // Reset swing animation and advance batter
+          // Reset swing animation and advance to next batter in round-robin order
           setTimeout(() => {
             setIsSwinging(false);
             setFrozenSliderPos(null);
@@ -268,7 +242,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
         }
       }, 350);
     },
-    [isSwinging, isGameOver, players, activePlayerIdx, pinataHp, isBroken, advanceToNextBatter]
+    [isSwinging, isGameOver, isBroken, players, activePlayerIdx, pinataHp, advanceToNextBatter]
   );
 
   // Spacebar keyboard listener to swing
@@ -276,7 +250,7 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         const active = players[activePlayerIdx];
-        if (active && !active.isBot && !isSwinging && !isGameOver && active.pinataSwings > 0) {
+        if (active && !active.isBot && !isSwinging && !isGameOver && !isBroken) {
           e.preventDefault();
           handleSwing();
         }
@@ -284,12 +258,12 @@ export const PinataGame: React.FC<PinataGameProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [players, activePlayerIdx, isSwinging, isGameOver, handleSwing]);
+  }, [players, activePlayerIdx, isSwinging, isGameOver, isBroken, handleSwing]);
 
   // AI Bot Swing Loop: Bot timing precision scales with berry count!
   useEffect(() => {
     const active = players[activePlayerIdx];
-    if (!active || !active.isBot || isSwinging || isGameOver || active.pinataSwings <= 0) {
+    if (!active || !active.isBot || isSwinging || isGameOver || isBroken) {
       return;
     }
 
@@ -453,8 +427,8 @@ export const PinataGame: React.FC<PinataGameProps> = ({
             )}
 
             <div className="mt-2.5 flex items-center justify-between w-full text-xs font-bold bg-pink-50 px-3 py-1.5 rounded-xl border border-pink-200">
-              <span className="text-pink-700">
-                Swings Left: <strong>{activePlayer.pinataSwings}</strong>
+              <span className="text-pink-700 flex items-center gap-1.5">
+                <span>🏏</span> Up To Bat Now!
               </span>
               <span className="text-amber-700">
                 Candy Points: <strong>{activePlayer.pinataCandy}</strong> 🍬
@@ -605,9 +579,9 @@ export const PinataGame: React.FC<PinataGameProps> = ({
           <button
             type="button"
             onClick={() => handleSwing()}
-            disabled={isSwinging || activePlayer.pinataSwings <= 0 || isGameOver}
+            disabled={isSwinging || isGameOver || isBroken}
             className={`w-full max-w-md py-3.5 sm:py-4 rounded-2xl font-black text-lg sm:text-xl shadow-xl transition transform border-2 border-white/60 flex items-center justify-center gap-3 cursor-pointer ${
-              isSwinging || activePlayer.pinataSwings <= 0
+              isSwinging || isGameOver || isBroken
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : activePlayer.arrivedAtCastleOrder === 1
                 ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 hover:from-amber-500 hover:via-yellow-500 hover:to-orange-600 text-amber-950 hover:scale-105 active:scale-95 shadow-amber-500/40 ring-2 ring-yellow-300'
@@ -660,8 +634,8 @@ export const PinataGame: React.FC<PinataGameProps> = ({
               <div className="text-sm font-black text-amber-600 mt-0.5">
                 {p.pinataCandy} 🍬
               </div>
-              <div className="text-[10px] font-bold text-gray-500">
-                {p.pinataSwings} swings left
+              <div className="text-[10px] font-bold text-pink-600">
+                🍓 {p.berries} Berries
               </div>
             </div>
           ))}
